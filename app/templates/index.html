@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Image Classifier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            background: #000;
+        }
+
+        #video-stream {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .status-badge.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.inactive {
+            background: #ef4444;
+            color: white;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .info-card p {
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+
+        .class-list {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .class-list h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .classes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .class-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .class-item:hover {
+            transform: translateY(-2px);
+            border-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎥 Real-Time Image Classifier</h1>
+            <p class="subtitle">Powered by CIFAR-10 CNN Model</p>
+        </header>
+
+        <div class="main-content">
+            <div style="text-align: center;">
+                <span id="status-badge" class="status-badge">
+                    <div class="spinner"></div>
+                </span>
+            </div>
+
+            <div class="video-container">
+                <img id="video-stream" src="{{ url_for('video_feed') }}" alt="Video Stream">
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>📊 How It Works</h3>
+                    <p>This app uses a Convolutional Neural Network (CNN) trained on CIFAR-10 dataset to classify objects in real-time from your webcam.</p>
+                </div>
+                <div class="info-card">
+                    <h3>🎯 Accuracy</h3>
+                    <p>The model achieves ~70% accuracy on test data. For best results, show clear, well-lit objects similar to CIFAR-10 images.</p>
+                </div>
+                <div class="info-card">
+                    <h3>⚡ Performance</h3>
+                    <p>Predictions are made in real-time at ~10-30 FPS depending on your hardware and network conditions.</p>
+                </div>
+            </div>
+
+            <div class="class-list">
+                <h3>🏷️ Recognizable Classes</h3>
+                <div id="classes-container" class="classes">
+                    <div class="loading">Loading classes...</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Built with TensorFlow, Keras, Flask, and OpenCV</p>
+            <p style="margin-top: 5px; font-size: 0.9em;">
+                Need help? Check the <a href="https://github.com/ajiteguh85/computer-vision" style="color: #fbbf24;">README</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Check model status on page load
+        async function checkModelStatus() {
+            try {
+                const response = await fetch('/model_status');
+                const data = await response.json();
+
+                const badge = document.getElementById('status-badge');
+
+                if (data.model_loaded) {
+                    badge.className = 'status-badge active';
+                    badge.textContent = '✅ Model Active';
+
+                    // Display classes
+                    const classesContainer = document.getElementById('classes-container');
+                    classesContainer.innerHTML = '';
+
+                    data.classes.forEach(className => {
+                        const classItem = document.createElement('div');
+                        classItem.className = 'class-item';
+                        classItem.textContent = className;
+                        classesContainer.appendChild(classItem);
+                    });
+                } else {
+                    badge.className = 'status-badge inactive';
+                    badge.textContent = '❌ Model Not Loaded';
+
+                    const classesContainer = document.getElementById('classes-container');
+                    classesContainer.innerHTML = '<div class="loading">Model not available. Please train the model first.</div>';
+                }
+            } catch (error) {
+                console.error('Error checking model status:', error);
+                const badge = document.getElementById('status-badge');
+                badge.className = 'status-badge inactive';
+                badge.textContent = '❌ Connection Error';
+            }
+        }
+
+        // Handle video stream errors
+        const videoStream = document.getElementById('video-stream');
+        videoStream.onerror = function() {
+            console.error('Error loading video stream');
+        };
+
+        // Check status when page loads
+        checkModelStatus();
+
+        // Refresh status every 30 seconds
+        setInterval(checkModelStatus, 30000);
+    </script>
+</body>
+</html>
